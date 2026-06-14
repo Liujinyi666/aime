@@ -1,4 +1,13 @@
-// Aime Server - Entry point
-// Photo server and API server will be implemented here
+import express from "express";
+import path from "node:path";
+import { config } from "./config.js";
+import photosRouter from "./routes/photos.js";
 
-console.log("Aime server starting...");
+const app = express();
+
+app.use("/api", photosRouter);
+app.use("/photos", express.static(config.photoDir));
+
+app.listen(config.port, () => {
+  console.log(`Aime server running at http://localhost:${config.port}`);
+});
