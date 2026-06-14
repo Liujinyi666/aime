@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
+    "dev:ui": "npm --prefix ui run dev",
     "build": "tsc",
+    "build:ui": "npm --prefix ui run build",
     "start": "node dist/main.js"
   },
   "devDependencies": {
