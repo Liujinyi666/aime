@@ -1,43 +1,68 @@
 <template>
   <div class="grid">
     <div
-      v-for="item in items"
+      v-for="item in visibleItems"
       :key="item.path"
       class="item"
-      @click="onClick(item)"
+      :class="{ selected: selectedPaths.includes(item.path) }"
     >
-      <div v-if="item.type === 'dir'" class="folder">
+      <div v-if="item.type === 'dir'" class="folder" @click="openDir(item.path)">
         <span class="folder-icon">📁</span>
-        <span class="name">{{ item.name }}</span>
       </div>
       <div v-else class="photo">
-        <img :src="`/photos/${item.path}`" :alt="item.name" loading="lazy" />
-        <span class="name">{{ item.name }}</span>
+        <img
+          :src="getThumbnailUrl(item.path)"
+          :alt="item.name"
+          loading="lazy"
+          @click="onPhotoClick(item.path, $event)"
+        />
+        <button class="exclude-btn" @click.stop="excludePhoto(item.path)" title="排除">×</button>
       </div>
+      <span v-if="item.type === 'dir' || showNames" class="name">{{ item.name }}</span>
     </div>
-    <div v-if="!items.length" class="empty">此目录下没有照片</div>
+    <div v-if="!visibleItems.length" class="empty">此目录下没有照片</div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { reactive, computed } from "vue";
 import type { PhotoItem } from "@/types";
+import { getThumbnailUrl } from "@/api";
 
-defineProps<{ items: PhotoItem[] }>();
+const props = defineProps<{
+  items: PhotoItem[];
+  showNames: boolean;
+  columns: number;
+  selectedPaths: string[];
+}>();
 const emit = defineEmits<{
   openDir: [path: string];
+  viewPhoto: [path: string];
+  toggleSelect: [path: string];
 }>();
 
-function onClick(item: PhotoItem) {
-  if (item.type === "dir") {
-    emit("openDir", item.path);
+const excludedPaths = reactive(new Set<string>());
+const visibleItems = computed(() => props.items.filter(item => !excludedPaths.has(item.path)));
+
+function openDir(path: string) {
+  emit("openDir", path);
+}
+function onPhotoClick(path: string, e: MouseEvent) {
+  if (e.ctrlKey) {
+    emit("toggleSelect", path);
+  } else {
+    emit("viewPhoto", path);
   }
+}
+function excludePhoto(path: string) {
+  excludedPaths.add(path);
 }
 </script>
 
 <style scoped>
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(v-bind(columns), 1fr);
   gap: 16px;
   padding: 16px;
 }
@@ -45,30 +70,71 @@ function onClick(item: PhotoItem) {
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
-  transition: box-shadow 0.2s;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   background: #fff;
   border: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
 }
 .item:hover {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
 }
+.item.selected {
+  transform: translateY(-6px);
+  box-shadow: 0 6px 20px rgba(74, 144, 217, 0.3);
+  border-color: #4a90d9;
+  outline: 2px solid #4a90d9;
+  outline-offset: -2px;
+  z-index: 1;
+}
 .folder {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 32px 16px;
-  height: 160px;
+  aspect-ratio: 4 / 3;
 }
 .folder-icon {
   font-size: 48px;
-  margin-bottom: 8px;
+}
+.photo {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
 }
 .photo img {
-  width: 100%;
-  height: 160px;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
   display: block;
+  object-fit: contain;
+}
+.exclude-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.photo:hover .exclude-btn {
+  opacity: 1;
+}
+.exclude-btn:hover {
+  background: rgba(0, 0, 0, 0.7);
 }
 .name {
   display: block;

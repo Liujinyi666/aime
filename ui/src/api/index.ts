@@ -12,3 +12,7 @@ export async function fetchPhotos(path = ""): Promise<DirectoryContents> {
 export function getPhotoUrl(relativePath: string): string {
   return `/photos/${encodeURIComponent(relativePath)}`;
 }
+
+export function getThumbnailUrl(relativePath: string): string {
+  return `/api/thumbnail?path=${encodeURIComponent(relativePath)}`;
+}
