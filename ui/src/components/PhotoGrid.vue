@@ -48,7 +48,7 @@ function openDir(path: string) {
   emit("openDir", path);
 }
 function onPhotoClick(path: string, e: MouseEvent) {
-  if (e.ctrlKey) {
+  if (e.ctrlKey || e.metaKey) {
     emit("toggleSelect", path);
   } else {
     emit("viewPhoto", path);

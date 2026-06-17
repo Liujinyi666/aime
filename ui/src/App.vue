@@ -42,10 +42,10 @@
     </div>
   </Teleport>
   <Teleport to="body">
-    <div v-if="compareMode" class="compare-overlay">
+    <div v-if="compareMode" class="compare-overlay" @wheel.prevent="onCompareWheel">
       <div class="compare-grid" :style="compareGridStyle">
-        <div v-for="path in comparePaths" :key="path" class="compare-cell">
-          <img :src="getPhotoUrl(path)" class="compare-image" />
+        <div v-for="path in comparePaths" :key="path" class="compare-cell" :data-path="path">
+          <img :src="getPhotoUrl(path)" class="compare-image" :style="getCompareImageStyle(path)" />
         </div>
       </div>
       <button class="compare-exit" @click="closeCompare">✕</button>
@@ -75,6 +75,9 @@ const MAX_SCALE = 8;
 const selectedPaths = ref<string[]>([]);
 const compareMode = ref(false);
 const comparePaths = ref<string[]>([]);
+const compareScales = ref<Record<string, number>>({});
+const COMPARE_MIN_SCALE = 0.25;
+const COMPARE_MAX_SCALE = 8;
 
 let isDragging = false;
 let hasMoved = false;
@@ -182,7 +185,30 @@ function openCompare() {
 
 function closeCompare() {
   compareMode.value = false;
+  compareScales.value = {};
   document.body.style.overflow = "";
+}
+
+function getCompareImageStyle(path: string) {
+  const scale = compareScales.value[path] ?? 1;
+  return { transform: `scale(${scale})` };
+}
+
+function onCompareWheel(e: WheelEvent) {
+  const delta = -e.deltaY * 0.001;
+  if (e.ctrlKey || e.metaKey) {
+    for (const path of comparePaths.value) {
+      const oldScale = compareScales.value[path] ?? 1;
+      compareScales.value[path] = Math.max(COMPARE_MIN_SCALE, Math.min(COMPARE_MAX_SCALE, oldScale * (1 + delta)));
+    }
+  } else {
+    const cell = (e.target as HTMLElement).closest(".compare-cell") as HTMLElement | null;
+    if (!cell) return;
+    const path = cell.dataset.path;
+    if (!path) return;
+    const oldScale = compareScales.value[path] ?? 1;
+    compareScales.value[path] = Math.max(COMPARE_MIN_SCALE, Math.min(COMPARE_MAX_SCALE, oldScale * (1 + delta)));
+  }
 }
 
 const transformStyle = computed(() => ({
@@ -347,6 +373,7 @@ body {
   max-height: 100%;
   object-fit: contain;
   display: block;
+  transform-origin: center center;
 }
 .compare-exit {
   position: fixed;
